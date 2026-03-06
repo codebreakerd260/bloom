@@ -11,6 +11,7 @@ Bloom is an interactive web application that transforms your spoken gratitude jo
 - **AI Sentiment Analysis:** Integrates the official `@google/generative-ai` SDK (Gemini 2.5 Flash) to analyze the meaning and emotion behind your gratitude entry. Based on the sentiment (e.g., family, peace, joy, nature), it procedurally selects and plants the corresponding 3D flora (Sunflower, Fern, Tulip, Tree, or Grass).
 - **TTS Integration:** Supports an external Piper TTS audio engine (running on `http://localhost:5050/api/tts`) to speak encouraging responses, with an automatic, graceful native Web Speech API fallback if the local Piper server is offline.
 - **Procedural 3D Assets:** All plants (Sunflowers, Tulips, Ferns, Trees, Grass) are procedurally generated in R3F with custom stylized glass/matte materials, randomized scale/rotation, and optimized with React `useMemo` to prevent rendering jitter holding random 3D identities across keystrokes.
+- **Interactive Memories:** The generated plants are fully interactive. Hover over any plant to reveal a stunning frosted-glass tooltip containing the original journal entry that spawned it, and click on the plant to replay the AI's encouraging audio response.
 - **Glassmorphic UI:** Features a modern, premium frosted-glass design layered seamlessly atop the active 3D `Canvas`.
 - **Single File Wonders:** The entire React architecture, Tailwind styling, and 3D rendering loop are elegantly bundled into a single `index.html` file using Babel standalone. No node modules or build steps required.
 ## 🚀 How to Run
