@@ -31,7 +31,7 @@
     import React, { useState, useEffect, useRef } from 'react';
     import { createRoot } from 'react-dom/client';
     import { Canvas } from '@react-three/fiber';
-    import { OrbitControls, Sky } from '@react-three/drei';
+    import { OrbitControls, Sky, Html } from '@react-three/drei';
     import { GoogleGenerativeAI } from '@google/generative-ai';
     import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.16.0';
 
@@ -50,45 +50,77 @@
       );
     }
 
-    function Sunflower({ position }) {
-      const rotY = React.useMemo(() => Math.random() * Math.PI * 2, []);
+    // A generic wrapper to handle interaction logic for all plants
+    function InteractivePlant({ position, plantData, onPlayTTS, offsetY = 2.5, children }) {
+      const [hovered, setHovered] = useState(false);
+
+      useEffect(() => {
+        document.body.style.cursor = hovered ? 'pointer' : 'auto';
+      }, [hovered]);
+
       return (
-        <group position={position} scale={[0.7, 0.7, 0.7]} rotation={[0, rotY, 0]}>
-          {/* Stem */}
-          <mesh position={[0, 1.3, 0]}>
-            <cylinderGeometry args={[0.08, 0.12, 3]} />
-            <PlantMaterial color="#3b821d" />
-          </mesh>
-          {/* Leaves */}
-          <mesh position={[0.2, 1, 0]} rotation={[0, 0, -Math.PI / 4]}>
-            <coneGeometry args={[0.3, 0.8]} />
-            <PlantMaterial color="#4caf50" />
-          </mesh>
-          <mesh position={[-0.2, 1.5, 0]} rotation={[0, 0, Math.PI / 4]}>
-            <coneGeometry args={[0.25, 0.6]} />
-            <PlantMaterial color="#4caf50" />
-          </mesh>
-          {/* Flower Head */}
-          <group position={[0, 3, 0]} rotation={[Math.PI / 6, 0, 0]}>
-            {/* Center Disk */}
-            <mesh position={[0, 0, 0.1]} rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.4, 0.4, 0.1]} />
-              <meshStandardMaterial color="#4e342e" roughness={1} />
-            </mesh>
-            {/* Petals arranged in a circle */}
-            {Array.from({ length: 16 }).map((_, i) => (
-              <mesh key={i} position={[Math.sin((i / 16) * Math.PI * 2) * 0.5, Math.cos((i / 16) * Math.PI * 2) * 0.5, 0.05]} rotation={[0, 0, (-i / 16) * Math.PI * 2]}>
-                <sphereGeometry args={[0.15, 8, 8]} scale={[1, 2.5, 0.2]} />
-                <meshStandardMaterial color="#ffc107" roughness={0.4} />
-              </mesh>
-            ))}
-          </group>
+        <group
+          position={position}
+          onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
+          onPointerOut={(e) => { e.stopPropagation(); setHovered(false); }}
+          onClick={(e) => { e.stopPropagation(); if (plantData.message) onPlayTTS(plantData.message); }}
+        >
+          {children}
+
+          {hovered && plantData.entry && (
+            <Html position={[0, offsetY, 0]} center style={{ pointerEvents: 'none' }}>
+              <div className="bg-black/70 backdrop-blur text-white px-4 py-2 rounded-xl text-sm max-w-xs text-center shadow-lg transform -translate-y-full mb-2 opacity-100 transition-opacity whitespace-pre-wrap">
+                <p className="font-medium italic">"{plantData.entry}"</p>
+                <div className="text-xs text-white/50 mt-1 flex items-center justify-center gap-1">
+                  <span>🎵</span> Click to hear message
+                </div>
+              </div>
+            </Html>
+          )}
         </group>
       );
     }
 
-    function Fern({ position }) {
-      // Memoize the random frond angles and sizes so they don't jitter
+    function Sunflower({ position, plantData, onPlayTTS }) {
+      const rotY = React.useMemo(() => Math.random() * Math.PI * 2, []);
+      return (
+        <InteractivePlant position={position} plantData={plantData} onPlayTTS={onPlayTTS} offsetY={0.3}>
+          <group scale={[0.7, 0.7, 0.7]} rotation={[0, rotY, 0]}>
+            {/* Stem */}
+            <mesh position={[0, 1.3, 0]}>
+              <cylinderGeometry args={[0.08, 0.12, 3]} />
+              <PlantMaterial color="#3b821d" />
+            </mesh>
+            {/* Leaves */}
+            <mesh position={[0.2, 1, 0]} rotation={[0, 0, -Math.PI / 4]}>
+              <coneGeometry args={[0.3, 0.8]} />
+              <PlantMaterial color="#4caf50" />
+            </mesh>
+            <mesh position={[-0.2, 1.5, 0]} rotation={[0, 0, Math.PI / 4]}>
+              <coneGeometry args={[0.25, 0.6]} />
+              <PlantMaterial color="#4caf50" />
+            </mesh>
+            {/* Flower Head */}
+            <group position={[0, 3, 0]} rotation={[Math.PI / 6, 0, 0]}>
+              {/* Center Disk */}
+              <mesh position={[0, 0, 0.1]} rotation={[Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[0.4, 0.4, 0.1]} />
+                <meshStandardMaterial color="#4e342e" roughness={1} />
+              </mesh>
+              {/* Petals arranged in a circle */}
+              {Array.from({ length: 16 }).map((_, i) => (
+                <mesh key={i} position={[Math.sin((i / 16) * Math.PI * 2) * 0.5, Math.cos((i / 16) * Math.PI * 2) * 0.5, 0.05]} rotation={[0, 0, (-i / 16) * Math.PI * 2]}>
+                  <sphereGeometry args={[0.15, 8, 8]} scale={[1, 2.5, 0.2]} />
+                  <meshStandardMaterial color="#ffc107" roughness={0.4} />
+                </mesh>
+              ))}
+            </group>
+          </group>
+        </InteractivePlant>
+      );
+    }
+
+    function Fern({ position, plantData, onPlayTTS }) {
       const fronds = React.useMemo(() => {
         return Array.from({ length: 9 }).map((_, i) => ({
           angle: (i / 9) * Math.PI * 2,
@@ -98,79 +130,83 @@
       }, []);
 
       return (
-        <group position={position} scale={[0.7, 0.7, 0.7]}>
-          {/* Multiple fronds arching outwards */}
-          {fronds.map((frond, i) => (
-            <group key={i} rotation={[0, frond.angle, 0]}>
-              <mesh position={[0, frond.size, frond.size / 2]} rotation={[frond.arch, 0, 0]}>
-                <cylinderGeometry args={[0.02, 0.1, frond.size * 2]} />
-                <PlantMaterial color="#2e7d32" />
-              </mesh>
-            </group>
-          ))}
-        </group>
+        <InteractivePlant position={position} plantData={plantData} onPlayTTS={onPlayTTS} offsetY={0.2}>
+          <group scale={[0.7, 0.7, 0.7]}>
+            {/* Multiple fronds arching outwards */}
+            {fronds.map((frond, i) => (
+              <group key={i} rotation={[0, frond.angle, 0]}>
+                <mesh position={[0, frond.size, frond.size / 2]} rotation={[frond.arch, 0, 0]}>
+                  <cylinderGeometry args={[0.02, 0.1, frond.size * 2]} />
+                  <PlantMaterial color="#2e7d32" />
+                </mesh>
+              </group>
+            ))}
+          </group>
+        </InteractivePlant>
       );
     }
 
-    function Tulip({ position }) {
+    function Tulip({ position, plantData, onPlayTTS }) {
       const colors = ["#e91e63", "#ff9800", "#f44336", "#9c27b0"];
       const color = React.useMemo(() => colors[Math.floor(Math.random() * colors.length)], []);
       return (
-        <group position={position} scale={[0.8, 0.8, 0.8]}>
-          {/* Stem */}
-          <mesh position={[0, 0.8, 0]}>
-            <cylinderGeometry args={[0.04, 0.06, 1.6]} />
-            <PlantMaterial color="#66bb6a" />
-          </mesh>
-          {/* Long thin leaf */}
-          <mesh position={[0.1, 0.5, 0]} rotation={[0, 0, -Math.PI / 6]}>
-            <cylinderGeometry args={[0.02, 0.1, 1]} />
-            <PlantMaterial color="#4caf50" />
-          </mesh>
-          {/* Tulip Cup / Bulb */}
-          <mesh position={[0, 1.7, 0]}>
-            <cylinderGeometry args={[0.25, 0.1, 0.5, 16, 1, false, 0, Math.PI * 2]} />
-            <meshStandardMaterial color={color} roughness={0.3} metalness={0.1} />
-          </mesh>
-          {/* Inner bulb light */}
-          <mesh position={[0, 1.6, 0]}>
-            <sphereGeometry args={[0.15]} />
-            <meshStandardMaterial color="#ffffff" emissive="#ffea00" emissiveIntensity={0.2} />
-          </mesh>
-        </group>
+        <InteractivePlant position={position} plantData={plantData} onPlayTTS={onPlayTTS} offsetY={0.2}>
+          <group scale={[0.8, 0.8, 0.8]}>
+            {/* Stem */}
+            <mesh position={[0, 0.8, 0]}>
+              <cylinderGeometry args={[0.04, 0.06, 1.6]} />
+              <PlantMaterial color="#66bb6a" />
+            </mesh>
+            {/* Long thin leaf */}
+            <mesh position={[0.1, 0.5, 0]} rotation={[0, 0, -Math.PI / 6]}>
+              <cylinderGeometry args={[0.02, 0.1, 1]} />
+              <PlantMaterial color="#4caf50" />
+            </mesh>
+            {/* Tulip Cup / Bulb */}
+            <mesh position={[0, 1.7, 0]}>
+              <cylinderGeometry args={[0.25, 0.1, 0.5, 16, 1, false, 0, Math.PI * 2]} />
+              <meshStandardMaterial color={color} roughness={0.3} metalness={0.1} />
+            </mesh>
+            {/* Inner bulb light */}
+            <mesh position={[0, 1.6, 0]}>
+              <sphereGeometry args={[0.15]} />
+              <meshStandardMaterial color="#ffffff" emissive="#ffea00" emissiveIntensity={0.2} />
+            </mesh>
+          </group>
+        </InteractivePlant>
       );
     }
 
-    function Tree({ position }) {
-      // Find the "sweet spot" size relative to the 30x30 garden tile
+    function Tree({ position, plantData, onPlayTTS }) {
       const s = React.useMemo(() => 1.5 + Math.random() * 0.8, []);
       return (
-        <group position={position} scale={[s, s, s]}>
-          {/* Trunk */}
-          <mesh position={[0, 1.5, 0]} castShadow>
-            <cylinderGeometry args={[0.4, 0.6, 3]} />
-            <meshStandardMaterial color="#5d4037" roughness={0.9} />
-          </mesh>
-          {/* Main Canopy */}
-          <mesh position={[0, 3.5, 0]} castShadow>
-            <dodecahedronGeometry args={[2, 1]} />
-            <PlantMaterial color="#388e3c" />
-          </mesh>
-          {/* Side bushs for organic look */}
-          <mesh position={[1, 3, 0.5]} castShadow>
-            <dodecahedronGeometry args={[1.2, 1]} />
-            <PlantMaterial color="#43a047" />
-          </mesh>
-          <mesh position={[-0.8, 3.2, -0.8]} castShadow>
-            <dodecahedronGeometry args={[1.5, 1]} />
-            <PlantMaterial color="#2e7d32" />
-          </mesh>
-        </group>
+        <InteractivePlant position={position} plantData={plantData} onPlayTTS={onPlayTTS} offsetY={0.6 * s}>
+          <group scale={[s, s, s]}>
+            {/* Trunk */}
+            <mesh position={[0, 1.5, 0]} castShadow>
+              <cylinderGeometry args={[0.4, 0.6, 3]} />
+              <meshStandardMaterial color="#5d4037" roughness={0.9} />
+            </mesh>
+            {/* Main Canopy */}
+            <mesh position={[0, 3.5, 0]} castShadow>
+              <dodecahedronGeometry args={[2, 1]} />
+              <PlantMaterial color="#388e3c" />
+            </mesh>
+            {/* Side bushs for organic look */}
+            <mesh position={[1, 3, 0.5]} castShadow>
+              <dodecahedronGeometry args={[1.2, 1]} />
+              <PlantMaterial color="#43a047" />
+            </mesh>
+            <mesh position={[-0.8, 3.2, -0.8]} castShadow>
+              <dodecahedronGeometry args={[1.5, 1]} />
+              <PlantMaterial color="#2e7d32" />
+            </mesh>
+          </group>
+        </InteractivePlant>
       );
     }
 
-    function Grass({ position }) {
-      // Memoize the random clump geometry so it doesn't shift on every typed letter
+    function Grass({ position, plantData, onPlayTTS }) {
       const blades = React.useMemo(() => {
         return Array.from({ length: 5 }).map((_, i) => ({
           pos: [(Math.random() - 0.5) * 0.3, 0.2, (Math.random() - 0.5) * 0.3],
@@ -180,18 +216,20 @@
       }, []);
 
       return (
-        <group position={position}>
-          {blades.map((blade, i) => (
-            <mesh key={i} position={blade.pos} rotation={blade.rot}>
-              <coneGeometry args={[0.05, blade.scale]} />
-              <PlantMaterial color="#81c784" />
-            </mesh>
-          ))}
-        </group>
+        <InteractivePlant position={position} plantData={plantData} onPlayTTS={onPlayTTS} offsetY={0.1}>
+          <group>
+            {blades.map((blade, i) => (
+              <mesh key={i} position={blade.pos} rotation={blade.rot}>
+                <coneGeometry args={[0.05, blade.scale]} />
+                <PlantMaterial color="#81c784" />
+              </mesh>
+            ))}
+          </group>
+        </InteractivePlant>
       );
     }
 
-    function Garden({ plants }) {
+    function Garden({ plants, onPlayTTS }) {
       return (
         <Canvas camera={{ position: [0, 5, 15], fov: 50 }}>
           <Sky sunPosition={[100, 20, 100]} />
@@ -210,7 +248,7 @@
               tree: Tree,
               grass: Grass
             }[plant.type] || Grass;
-            return <PlantModel key={i} position={plant.position} />;
+            return <PlantModel key={i} position={plant.position} plantData={plant} onPlayTTS={onPlayTTS} />;
           })}
         </Canvas>
       );
@@ -220,12 +258,12 @@
     function App() {
       // Preload a small beautiful starter garden
       const [plants, setPlants] = useState([
-        { type: "tree", position: [-5, 0, -4] },
-        { type: "sunflower", position: [-2, 0, -2] },
-        { type: "tulip", position: [3, 0, -1] },
-        { type: "fern", position: [4, 0, -4] },
-        { type: "grass", position: [-1, 0, 2] },
-        { type: "grass", position: [2, 0, 3] },
+        { type: "tree", position: [-5, 0, -4], entry: "I am grateful for the deep roots of my family.", message: "Roots hold us steady during storms." },
+        { type: "sunflower", position: [-2, 0, -2], entry: "So thankful for the warm sunshine today.", message: "The sun brings warmth to every soul." },
+        { type: "tulip", position: [3, 0, -1], entry: "I loved the bright colors of the sky this morning.", message: "Beauty is all around us." },
+        { type: "fern", position: [4, 0, -4], entry: "Grateful for quiet, peaceful moments to myself.", message: "Quiet moments restore the spirit." },
+        { type: "grass", position: [-1, 0, 2], entry: "Appreciating the simple feeling of grass under my feet.", message: "Simple joys are the best joys." },
+        { type: "grass", position: [2, 0, 3], entry: "A good walk in the park.", message: "Nature heals the mind." },
       ]);
       const [entry, setEntry] = useState("");
       const [geminiKey, setGeminiKey] = useState("");
@@ -344,7 +382,7 @@
           Return ONLY a JSON object with two fields (do not wrap in markdown tags like \`\`\`json): 
           {
             "type": one of ["sunflower", "fern", "tulip", "tree", "grass"] based on sentiment/meaning,
-            "message": "A short 1 sentence encouraging response"
+            "message": "A beautiful, poetic, and highly personalized 2-3 sentence response that deeply reflects on the user's gratitude and offers profound encouragement."
           }`;
 
           const result = await model.generateContent(prompt);
@@ -409,7 +447,7 @@
         <div className="relative w-screen h-screen overflow-hidden">
           {/* 3D Background */}
           <div className="absolute inset-0 z-0 bg-blue-50">
-            <Garden plants={plants} />
+            <Garden plants={plants} onPlayTTS={playPiperTTS} />
           </div>
 
           {/* Foreground Overlay Content (pointer-events-none so we can click the 3D garden behind it) */}
