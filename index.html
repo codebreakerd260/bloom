@@ -399,7 +399,7 @@
           const x = (Math.random() - 0.5) * 20;
           const z = (Math.random() - 0.5) * 20;
 
-          setPlants(prev => [...prev, { type: data.type, position: [x, 0, z] }]);
+          setPlants(prev => [...prev, { type: data.type, position: [x, 0, z], entry, message: data.message }]);
           playPiperTTS(data.message);
 
           setEntry("");
@@ -433,7 +433,7 @@
             const x = (Math.random() - 0.5) * 20;
             const z = (Math.random() - 0.5) * 20;
             setTimeout(() => {
-              setPlants(prev => [...prev, { type, position: [x, 0, z] }]);
+              setPlants(prev => [...prev, { type, position: [x, 0, z], entry, message }]);
               playPiperTTS(message);
               setEntry("");
             }, 500);
