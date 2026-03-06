@@ -1,10 +1,11 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <title>Bloom 🌱 (3D + AI)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  
+
   <!-- Import Map for ESM dependencies -->
   <script type="importmap">
     {
@@ -18,10 +19,11 @@
       }
     }
   </script>
-  
+
   <!-- Babel standalone for in-browser JSX compilation -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
+
 <body class="bg-green-50 m-0 p-0 font-sans">
   <div id="root"></div>
 
@@ -35,70 +37,156 @@
 
     env.allowLocalModels = false;
 
-    // --- 3D Plant Components ---
-    function Sunflower({ position }) {
+    // --- Upgraded 3D Plant Components ---
+
+    // A pulsing, swaying animated material specifically for leaves/grass
+    function PlantMaterial({ color }) {
       return (
-        <group position={position}>
-          <mesh position={[0, 1.5, 0]}>
-            <cylinderGeometry args={[0.1, 0.1, 3]} />
-            <meshStandardMaterial color="green" />
+        <meshStandardMaterial
+          color={color}
+          roughness={0.8}
+          metalness={0.1}
+        />
+      );
+    }
+
+    function Sunflower({ position }) {
+      const rotY = React.useMemo(() => Math.random() * Math.PI * 2, []);
+      return (
+        <group position={position} scale={[0.7, 0.7, 0.7]} rotation={[0, rotY, 0]}>
+          {/* Stem */}
+          <mesh position={[0, 1.3, 0]}>
+            <cylinderGeometry args={[0.08, 0.12, 3]} />
+            <PlantMaterial color="#3b821d" />
           </mesh>
-          <mesh position={[0, 3, 0]}>
-            <sphereGeometry args={[0.5]} />
-            <meshStandardMaterial color="gold" />
+          {/* Leaves */}
+          <mesh position={[0.2, 1, 0]} rotation={[0, 0, -Math.PI / 4]}>
+            <coneGeometry args={[0.3, 0.8]} />
+            <PlantMaterial color="#4caf50" />
           </mesh>
+          <mesh position={[-0.2, 1.5, 0]} rotation={[0, 0, Math.PI / 4]}>
+            <coneGeometry args={[0.25, 0.6]} />
+            <PlantMaterial color="#4caf50" />
+          </mesh>
+          {/* Flower Head */}
+          <group position={[0, 3, 0]} rotation={[Math.PI / 6, 0, 0]}>
+            {/* Center Disk */}
+            <mesh position={[0, 0, 0.1]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.4, 0.4, 0.1]} />
+              <meshStandardMaterial color="#4e342e" roughness={1} />
+            </mesh>
+            {/* Petals arranged in a circle */}
+            {Array.from({ length: 16 }).map((_, i) => (
+              <mesh key={i} position={[Math.sin((i / 16) * Math.PI * 2) * 0.5, Math.cos((i / 16) * Math.PI * 2) * 0.5, 0.05]} rotation={[0, 0, (-i / 16) * Math.PI * 2]}>
+                <sphereGeometry args={[0.15, 8, 8]} scale={[1, 2.5, 0.2]} />
+                <meshStandardMaterial color="#ffc107" roughness={0.4} />
+              </mesh>
+            ))}
+          </group>
         </group>
       );
     }
 
     function Fern({ position }) {
+      // Memoize the random frond angles and sizes so they don't jitter
+      const fronds = React.useMemo(() => {
+        return Array.from({ length: 9 }).map((_, i) => ({
+          angle: (i / 9) * Math.PI * 2,
+          arch: Math.PI / 4 + Math.random() * 0.2,
+          size: 0.8 + Math.random() * 0.4
+        }));
+      }, []);
+
       return (
-        <group position={position}>
-           <mesh position={[0, 1, 0]}>
-            <cylinderGeometry args={[0.05, 0.1, 2]} />
-            <meshStandardMaterial color="darkgreen" />
-          </mesh>
+        <group position={position} scale={[0.7, 0.7, 0.7]}>
+          {/* Multiple fronds arching outwards */}
+          {fronds.map((frond, i) => (
+            <group key={i} rotation={[0, frond.angle, 0]}>
+              <mesh position={[0, frond.size, frond.size / 2]} rotation={[frond.arch, 0, 0]}>
+                <cylinderGeometry args={[0.02, 0.1, frond.size * 2]} />
+                <PlantMaterial color="#2e7d32" />
+              </mesh>
+            </group>
+          ))}
         </group>
       );
     }
 
     function Tulip({ position }) {
+      const colors = ["#e91e63", "#ff9800", "#f44336", "#9c27b0"];
+      const color = React.useMemo(() => colors[Math.floor(Math.random() * colors.length)], []);
       return (
-        <group position={position}>
-          <mesh position={[0, 0.5, 0]}>
-            <cylinderGeometry args={[0.05, 0.05, 1]} />
-            <meshStandardMaterial color="green" />
+        <group position={position} scale={[0.8, 0.8, 0.8]}>
+          {/* Stem */}
+          <mesh position={[0, 0.8, 0]}>
+            <cylinderGeometry args={[0.04, 0.06, 1.6]} />
+            <PlantMaterial color="#66bb6a" />
           </mesh>
-          <mesh position={[0, 1, 0]}>
-            <coneGeometry args={[0.3, 0.5]} />
-            <meshStandardMaterial color="hotpink" />
+          {/* Long thin leaf */}
+          <mesh position={[0.1, 0.5, 0]} rotation={[0, 0, -Math.PI / 6]}>
+            <cylinderGeometry args={[0.02, 0.1, 1]} />
+            <PlantMaterial color="#4caf50" />
+          </mesh>
+          {/* Tulip Cup / Bulb */}
+          <mesh position={[0, 1.7, 0]}>
+            <cylinderGeometry args={[0.25, 0.1, 0.5, 16, 1, false, 0, Math.PI * 2]} />
+            <meshStandardMaterial color={color} roughness={0.3} metalness={0.1} />
+          </mesh>
+          {/* Inner bulb light */}
+          <mesh position={[0, 1.6, 0]}>
+            <sphereGeometry args={[0.15]} />
+            <meshStandardMaterial color="#ffffff" emissive="#ffea00" emissiveIntensity={0.2} />
           </mesh>
         </group>
       );
     }
 
     function Tree({ position }) {
+      // Find the "sweet spot" size relative to the 30x30 garden tile
+      const s = React.useMemo(() => 1.5 + Math.random() * 0.8, []);
       return (
-        <group position={position}>
-          <mesh position={[0, 1, 0]}>
-            <cylinderGeometry args={[0.4, 0.6, 2]} />
-            <meshStandardMaterial color="saddlebrown" />
+        <group position={position} scale={[s, s, s]}>
+          {/* Trunk */}
+          <mesh position={[0, 1.5, 0]} castShadow>
+            <cylinderGeometry args={[0.4, 0.6, 3]} />
+            <meshStandardMaterial color="#5d4037" roughness={0.9} />
           </mesh>
-          <mesh position={[0, 2.5, 0]}>
-            <sphereGeometry args={[1.5]} />
-            <meshStandardMaterial color="forestgreen" />
+          {/* Main Canopy */}
+          <mesh position={[0, 3.5, 0]} castShadow>
+            <dodecahedronGeometry args={[2, 1]} />
+            <PlantMaterial color="#388e3c" />
+          </mesh>
+          {/* Side bushs for organic look */}
+          <mesh position={[1, 3, 0.5]} castShadow>
+            <dodecahedronGeometry args={[1.2, 1]} />
+            <PlantMaterial color="#43a047" />
+          </mesh>
+          <mesh position={[-0.8, 3.2, -0.8]} castShadow>
+            <dodecahedronGeometry args={[1.5, 1]} />
+            <PlantMaterial color="#2e7d32" />
           </mesh>
         </group>
       );
     }
 
     function Grass({ position }) {
+      // Memoize the random clump geometry so it doesn't shift on every typed letter
+      const blades = React.useMemo(() => {
+        return Array.from({ length: 5 }).map((_, i) => ({
+          pos: [(Math.random() - 0.5) * 0.3, 0.2, (Math.random() - 0.5) * 0.3],
+          rot: [0, Math.random() * Math.PI, (Math.random() - 0.5) * 0.5],
+          scale: 0.4 + Math.random() * 0.3
+        }));
+      }, []);
+
       return (
         <group position={position}>
-          <mesh position={[0, 0.2, 0]}>
-            <cylinderGeometry args={[0.02, 0.02, 0.4]} />
-            <meshStandardMaterial color="green" />
-          </mesh>
+          {blades.map((blade, i) => (
+            <mesh key={i} position={blade.pos} rotation={blade.rot}>
+              <coneGeometry args={[0.05, blade.scale]} />
+              <PlantMaterial color="#81c784" />
+            </mesh>
+          ))}
         </group>
       );
     }
@@ -130,12 +218,20 @@
 
     // --- Main App Component ---
     function App() {
-      const [plants, setPlants] = useState([]);
+      // Preload a small beautiful starter garden
+      const [plants, setPlants] = useState([
+        { type: "tree", position: [-5, 0, -4] },
+        { type: "sunflower", position: [-2, 0, -2] },
+        { type: "tulip", position: [3, 0, -1] },
+        { type: "fern", position: [4, 0, -4] },
+        { type: "grass", position: [-1, 0, 2] },
+        { type: "grass", position: [2, 0, 3] },
+      ]);
       const [entry, setEntry] = useState("");
       const [geminiKey, setGeminiKey] = useState("");
       const [isRecording, setIsRecording] = useState(false);
       const [status, setStatus] = useState("Ready");
-      
+
       const transcriberRef = useRef(null);
       const mediaRecorderRef = useRef(null);
       const audioChunksRef = useRef([]);
@@ -169,13 +265,13 @@
             setStatus("Transcribing audio...");
             const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
             audioChunksRef.current = [];
-            
+
             if (transcriberRef.current) {
               const arrayBuffer = await audioBlob.arrayBuffer();
               const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
               const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
               const float32Array = audioBuffer.getChannelData(0);
-              
+
               try {
                 const result = await transcriberRef.current(float32Array);
                 setEntry(prev => (prev + " " + result.text).trim());
@@ -192,7 +288,7 @@
           mediaRecorderRef.current.start();
           setIsRecording(true);
           setStatus("Recording...");
-        } catch(err) {
+        } catch (err) {
           console.error("Microphone error", err);
           setStatus("Microphone access denied.");
         }
@@ -222,10 +318,10 @@
             setStatus("Ready");
             return;
           }
-        } catch(e) {
+        } catch (e) {
           console.log("Local Piper TTS unavailable, falling back to Web Speech API");
         }
-        
+
         // Fallback to Web Speech API
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.onend = () => setStatus("Ready");
@@ -240,7 +336,7 @@
         }
 
         setStatus("Analyzing sentiment via Gemini...");
-        
+
         try {
           const genAI = new GoogleGenerativeAI(geminiKey);
           const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -250,28 +346,62 @@
             "type": one of ["sunflower", "fern", "tulip", "tree", "grass"] based on sentiment/meaning,
             "message": "A short 1 sentence encouraging response"
           }`;
-          
+
           const result = await model.generateContent(prompt);
           let responseText = result.response.text().trim();
-          
-          if(responseText.startsWith('```json')) {
+
+          if (responseText.startsWith('```json')) {
             responseText = responseText.replace(/```json/, '').replace(/```/, '').trim();
-          } else if(responseText.startsWith('```')) {
+          } else if (responseText.startsWith('```')) {
             responseText = responseText.replace(/```/, '').replace(/```/, '').trim();
           }
 
           const data = JSON.parse(responseText);
-          
+
           const x = (Math.random() - 0.5) * 20;
           const z = (Math.random() - 0.5) * 20;
-          
+
           setPlants(prev => [...prev, { type: data.type, position: [x, 0, z] }]);
           playPiperTTS(data.message);
-          
+
           setEntry("");
         } catch (err) {
           console.error("Gemini Error:", err);
-          setStatus("Error analyzing entry with Gemini.");
+
+          // Check for Quota/Rate Limit Errors (429)
+          if (err.message && err.message.includes("429")) {
+            setStatus("Gemini Quota Exceeded. Falling back to local analysis...");
+            console.log("Using offline fallback logic due to API limit.");
+
+            // Fallback offline logic
+            const text = entry.toLowerCase();
+            let type = "grass";
+            let message = "A lovely thought to ground you today.";
+
+            if (text.includes("friend") || text.includes("family")) {
+              type = "sunflower";
+              message = "Relationships bring such bright warmth to our lives.";
+            } else if (text.includes("peace") || text.includes("quiet") || text.includes("calm")) {
+              type = "fern";
+              message = "Embrace this quiet serenity.";
+            } else if (text.includes("happy") || text.includes("joy") || text.includes("love")) {
+              type = "tulip";
+              message = "Joy is blooming beautifully within you.";
+            } else if (text.includes("nature") || text.includes("sun") || text.includes("walk")) {
+              type = "tree";
+              message = "Nature grounds us and helps us grow strong branches.";
+            }
+
+            const x = (Math.random() - 0.5) * 20;
+            const z = (Math.random() - 0.5) * 20;
+            setTimeout(() => {
+              setPlants(prev => [...prev, { type, position: [x, 0, z] }]);
+              playPiperTTS(message);
+              setEntry("");
+            }, 500);
+          } else {
+            setStatus("Error analyzing entry with Gemini.");
+          }
         }
       };
 
@@ -284,17 +414,17 @@
 
           {/* Foreground Overlay Content (pointer-events-none so we can click the 3D garden behind it) */}
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-between p-6 pointer-events-none pb-12">
-            
+
             <div className="flex flex-col items-center pt-6">
               <h1 className="text-5xl font-bold mb-3 text-white drop-shadow-lg">Bloom 3D 🌱</h1>
               <p className="text-white drop-shadow-lg font-medium text-lg">Voice your gratitude. Watch your 3D garden grow.</p>
             </div>
-            
+
             {/* Glassmorphic Card (pointer-events-auto so we can click inputs inside the card) */}
             <div className="flex flex-col gap-4 w-full max-w-md p-6 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] backdrop-blur-xl bg-white/20 border border-white/30 pointer-events-auto">
-              <input 
-                type="password" 
-                placeholder="Gemini API Key" 
+              <input
+                type="password"
+                placeholder="Gemini API Key"
                 value={geminiKey}
                 onChange={e => setGeminiKey(e.target.value)}
                 className="rounded-lg p-3 text-sm bg-white/50 placeholder-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white/70 transition-all border border-white/50"
@@ -305,7 +435,7 @@
                 className="rounded-lg p-3 w-full h-24 resize-none bg-white/50 placeholder-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white/70 transition-all border border-white/50"
                 placeholder="Today I'm grateful for..."
               />
-              
+
               <div className="flex gap-3">
                 <button
                   onMouseDown={startRecording}
@@ -313,15 +443,14 @@
                   onMouseLeave={stopRecording}
                   onTouchStart={startRecording}
                   onTouchEnd={stopRecording}
-                  className={`flex-1 py-3 rounded-xl text-white font-semibold transition-all shadow-lg active:scale-95 ${
-                    isRecording 
-                      ? 'bg-red-500/90 hover:bg-red-600/90' 
-                      : 'bg-blue-500/90 hover:bg-blue-600/90'
-                  }`}
+                  className={`flex-1 py-3 rounded-xl text-white font-semibold transition-all shadow-lg active:scale-95 ${isRecording
+                    ? 'bg-red-500/90 hover:bg-red-600/90'
+                    : 'bg-blue-500/90 hover:bg-blue-600/90'
+                    }`}
                 >
                   {isRecording ? "Listening..." : "Hold to Talk"}
                 </button>
-                
+
                 <button
                   onClick={growPlant}
                   className="flex-1 py-3 bg-green-500/90 text-white rounded-xl font-semibold shadow-lg hover:bg-green-600/90 transition-all active:scale-95"
@@ -329,7 +458,7 @@
                   Plant Seed
                 </button>
               </div>
-              
+
               <div className="mt-1 h-6 flex items-center justify-center bg-white/30 rounded-lg">
                 <p className="text-xs text-gray-800 font-bold">{status}</p>
               </div>
@@ -344,4 +473,5 @@
     root.render(<App />);
   </script>
 </body>
+
 </html>
