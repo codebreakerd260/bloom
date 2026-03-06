@@ -1,123 +1,347 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Bloom 🌱</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-
-  <body
-    class="bg-green-50 flex flex-col items-center justify-center min-h-screen"
-  >
-    <h1 class="text-3xl font-bold mb-4">Bloom 🌱</h1>
-    <p class="text-gray-600 mb-6">Write one thing you're grateful for</p>
-
-    <textarea
-      id="entry"
-      class="border rounded p-3 w-96 h-24"
-      placeholder="Today I'm grateful for..."
-    ></textarea>
-
-    <button
-      onclick="growPlant()"
-      class="mt-4 px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-    >
-      Plant
-    </button>
-
-    <svg
-      id="garden"
-      width="700"
-      height="350"
-      class="mt-10 border bg-white rounded shadow"
-    ></svg>
-
-    <script>
-      const garden = document.getElementById("garden");
-
-      function analyzeSentiment(text) {
-        text = text.toLowerCase();
-
-        if (text.includes("friend") || text.includes("family"))
-          return "sunflower";
-
-        if (
-          text.includes("peace") ||
-          text.includes("quiet") ||
-          text.includes("calm")
-        )
-          return "fern";
-
-        if (
-          text.includes("happy") ||
-          text.includes("joy") ||
-          text.includes("love")
-        )
-          return "tulip";
-
-        if (
-          text.includes("nature") ||
-          text.includes("sun") ||
-          text.includes("walk")
-        )
-          return "tree";
-
-        return "grass";
+<head>
+  <meta charset="UTF-8" />
+  <title>Bloom 🌱 (3D + AI)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Import Map for ESM dependencies -->
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0?dev",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
+        "three": "https://esm.sh/three@0.158.0",
+        "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.15.11?external=react,react-dom,three",
+        "@react-three/drei": "https://esm.sh/@react-three/drei@9.88.17?external=react,react-dom,three,@react-three/fiber",
+        "@google/generative-ai": "https://esm.sh/@google/generative-ai"
       }
+    }
+  </script>
+  
+  <!-- Babel standalone for in-browser JSX compilation -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-green-50 m-0 p-0 font-sans">
+  <div id="root"></div>
 
-      function growPlant() {
-        const entry = document.getElementById("entry").value;
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { Canvas } from '@react-three/fiber';
+    import { OrbitControls, Sky } from '@react-three/drei';
+    import { GoogleGenerativeAI } from '@google/generative-ai';
+    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.16.0';
 
+    env.allowLocalModels = false;
+
+    // --- 3D Plant Components ---
+    function Sunflower({ position }) {
+      return (
+        <group position={position}>
+          <mesh position={[0, 1.5, 0]}>
+            <cylinderGeometry args={[0.1, 0.1, 3]} />
+            <meshStandardMaterial color="green" />
+          </mesh>
+          <mesh position={[0, 3, 0]}>
+            <sphereGeometry args={[0.5]} />
+            <meshStandardMaterial color="gold" />
+          </mesh>
+        </group>
+      );
+    }
+
+    function Fern({ position }) {
+      return (
+        <group position={position}>
+           <mesh position={[0, 1, 0]}>
+            <cylinderGeometry args={[0.05, 0.1, 2]} />
+            <meshStandardMaterial color="darkgreen" />
+          </mesh>
+        </group>
+      );
+    }
+
+    function Tulip({ position }) {
+      return (
+        <group position={position}>
+          <mesh position={[0, 0.5, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 1]} />
+            <meshStandardMaterial color="green" />
+          </mesh>
+          <mesh position={[0, 1, 0]}>
+            <coneGeometry args={[0.3, 0.5]} />
+            <meshStandardMaterial color="hotpink" />
+          </mesh>
+        </group>
+      );
+    }
+
+    function Tree({ position }) {
+      return (
+        <group position={position}>
+          <mesh position={[0, 1, 0]}>
+            <cylinderGeometry args={[0.4, 0.6, 2]} />
+            <meshStandardMaterial color="saddlebrown" />
+          </mesh>
+          <mesh position={[0, 2.5, 0]}>
+            <sphereGeometry args={[1.5]} />
+            <meshStandardMaterial color="forestgreen" />
+          </mesh>
+        </group>
+      );
+    }
+
+    function Grass({ position }) {
+      return (
+        <group position={position}>
+          <mesh position={[0, 0.2, 0]}>
+            <cylinderGeometry args={[0.02, 0.02, 0.4]} />
+            <meshStandardMaterial color="green" />
+          </mesh>
+        </group>
+      );
+    }
+
+    function Garden({ plants }) {
+      return (
+        <Canvas camera={{ position: [0, 5, 15], fov: 50 }}>
+          <Sky sunPosition={[100, 20, 100]} />
+          <ambientLight intensity={0.5} />
+          <pointLight position={[10, 10, 10]} />
+          <OrbitControls />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+            <planeGeometry args={[30, 30]} />
+            <meshStandardMaterial color="#3d5c3a" />
+          </mesh>
+          {plants.map((plant, i) => {
+            const PlantModel = {
+              sunflower: Sunflower,
+              fern: Fern,
+              tulip: Tulip,
+              tree: Tree,
+              grass: Grass
+            }[plant.type] || Grass;
+            return <PlantModel key={i} position={plant.position} />;
+          })}
+        </Canvas>
+      );
+    }
+
+    // --- Main App Component ---
+    function App() {
+      const [plants, setPlants] = useState([]);
+      const [entry, setEntry] = useState("");
+      const [geminiKey, setGeminiKey] = useState("");
+      const [isRecording, setIsRecording] = useState(false);
+      const [status, setStatus] = useState("Ready");
+      
+      const transcriberRef = useRef(null);
+      const mediaRecorderRef = useRef(null);
+      const audioChunksRef = useRef([]);
+
+      useEffect(() => {
+        // Initialize Whisper from HuggingFace via Transformers.js
+        setStatus("Loading Whisper STT (may take slightly long initially)...");
+        pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en')
+          .then(t => {
+            transcriberRef.current = t;
+            setStatus("Ready");
+          })
+          .catch(e => {
+            console.error(e);
+            setStatus("Whisper STT failed. Check console.");
+          });
+      }, []);
+
+      const startRecording = async () => {
+        if (!navigator.mediaDevices) {
+          alert("Media devices not supported in this browser.");
+          return;
+        }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorderRef.current = new MediaRecorder(stream);
+          mediaRecorderRef.current.ondataavailable = e => {
+            audioChunksRef.current.push(e.data);
+          };
+          mediaRecorderRef.current.onstop = async () => {
+            setStatus("Transcribing audio...");
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+            audioChunksRef.current = [];
+            
+            if (transcriberRef.current) {
+              const arrayBuffer = await audioBlob.arrayBuffer();
+              const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+              const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+              const float32Array = audioBuffer.getChannelData(0);
+              
+              try {
+                const result = await transcriberRef.current(float32Array);
+                setEntry(prev => (prev + " " + result.text).trim());
+                setStatus("Ready");
+              } catch (err) {
+                console.error("Transcription error", err);
+                setStatus("Transcription failed.");
+              }
+            } else {
+              setStatus("Transcriber object is not loaded yet.");
+            }
+          };
+          audioChunksRef.current = [];
+          mediaRecorderRef.current.start();
+          setIsRecording(true);
+          setStatus("Recording...");
+        } catch(err) {
+          console.error("Microphone error", err);
+          setStatus("Microphone access denied.");
+        }
+      };
+
+      const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+          mediaRecorderRef.current.stop();
+          setIsRecording(false);
+        }
+      };
+
+      const playPiperTTS = async (text) => {
+        setStatus("Playing TTS...");
+        try {
+          // Attempt to call local Piper TTS server to conform to instructions
+          const controller = new AbortController();
+          // Timeout to avoid blocking on fetch if Piper is not actually running
+          const timeoutId = setTimeout(() => controller.abort(), 1000);
+          const res = await fetch(`http://localhost:5050/api/tts?text=${encodeURIComponent(text)}`, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            const audioBlob = await res.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.play();
+            setStatus("Ready");
+            return;
+          }
+        } catch(e) {
+          console.log("Local Piper TTS unavailable, falling back to Web Speech API");
+        }
+        
+        // Fallback to Web Speech API
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.onend = () => setStatus("Ready");
+        window.speechSynthesis.speak(utterance);
+      };
+
+      const growPlant = async () => {
         if (!entry.trim()) return;
-
-        const type = analyzeSentiment(entry);
-
-        const x = Math.random() * 650 + 20;
-        const y = 300;
-
-        let plant = "";
-
-        if (type === "sunflower") {
-          plant = `
-<g>
-<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 30}" stroke="green" stroke-width="3"/>
-<circle cx="${x}" cy="${y - 40}" r="10" fill="gold"/>
-</g>`;
+        if (!geminiKey) {
+          alert("Please enter a Gemini API Key to continue!");
+          return;
         }
 
-        if (type === "fern") {
-          plant = `
-<g>
-<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 25}" stroke="green" stroke-width="3"/>
-<ellipse cx="${x}" cy="${y - 30}" rx="8" ry="14" fill="green"/>
-</g>`;
+        setStatus("Analyzing sentiment via Gemini...");
+        
+        try {
+          const genAI = new GoogleGenerativeAI(geminiKey);
+          const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+          const prompt = `Analyze this gratitude journal entry: "${entry}". 
+          Return ONLY a JSON object with two fields (do not wrap in markdown tags like \`\`\`json): 
+          {
+            "type": one of ["sunflower", "fern", "tulip", "tree", "grass"] based on sentiment/meaning,
+            "message": "A short 1 sentence encouraging response"
+          }`;
+          
+          const result = await model.generateContent(prompt);
+          let responseText = result.response.text().trim();
+          
+          if(responseText.startsWith('```json')) {
+            responseText = responseText.replace(/```json/, '').replace(/```/, '').trim();
+          } else if(responseText.startsWith('```')) {
+            responseText = responseText.replace(/```/, '').replace(/```/, '').trim();
+          }
+
+          const data = JSON.parse(responseText);
+          
+          const x = (Math.random() - 0.5) * 20;
+          const z = (Math.random() - 0.5) * 20;
+          
+          setPlants(prev => [...prev, { type: data.type, position: [x, 0, z] }]);
+          playPiperTTS(data.message);
+          
+          setEntry("");
+        } catch (err) {
+          console.error("Gemini Error:", err);
+          setStatus("Error analyzing entry with Gemini.");
         }
+      };
 
-        if (type === "tulip") {
-          plant = `
-<g>
-<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 25}" stroke="green" stroke-width="3"/>
-<polygon points="${x},${y - 35} ${x - 10},${y - 20} ${x + 10},${y - 20}" fill="pink"/>
-</g>`;
-        }
+      return (
+        <div className="relative w-screen h-screen overflow-hidden">
+          {/* 3D Background */}
+          <div className="absolute inset-0 z-0 bg-blue-50">
+            <Garden plants={plants} />
+          </div>
 
-        if (type === "tree") {
-          plant = `
-<g>
-<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 40}" stroke="brown" stroke-width="4"/>
-<circle cx="${x}" cy="${y - 50}" r="15" fill="green"/>
-</g>`;
-        }
+          {/* Foreground Overlay Content (pointer-events-none so we can click the 3D garden behind it) */}
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-between p-6 pointer-events-none pb-12">
+            
+            <div className="flex flex-col items-center pt-6">
+              <h1 className="text-5xl font-bold mb-3 text-white drop-shadow-lg">Bloom 3D 🌱</h1>
+              <p className="text-white drop-shadow-lg font-medium text-lg">Voice your gratitude. Watch your 3D garden grow.</p>
+            </div>
+            
+            {/* Glassmorphic Card (pointer-events-auto so we can click inputs inside the card) */}
+            <div className="flex flex-col gap-4 w-full max-w-md p-6 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] backdrop-blur-xl bg-white/20 border border-white/30 pointer-events-auto">
+              <input 
+                type="password" 
+                placeholder="Gemini API Key" 
+                value={geminiKey}
+                onChange={e => setGeminiKey(e.target.value)}
+                className="rounded-lg p-3 text-sm bg-white/50 placeholder-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white/70 transition-all border border-white/50"
+              />
+              <textarea
+                value={entry}
+                onChange={e => setEntry(e.target.value)}
+                className="rounded-lg p-3 w-full h-24 resize-none bg-white/50 placeholder-gray-600 font-medium focus:outline-none focus:ring-2 focus:ring-green-400 focus:bg-white/70 transition-all border border-white/50"
+                placeholder="Today I'm grateful for..."
+              />
+              
+              <div className="flex gap-3">
+                <button
+                  onMouseDown={startRecording}
+                  onMouseUp={stopRecording}
+                  onMouseLeave={stopRecording}
+                  onTouchStart={startRecording}
+                  onTouchEnd={stopRecording}
+                  className={`flex-1 py-3 rounded-xl text-white font-semibold transition-all shadow-lg active:scale-95 ${
+                    isRecording 
+                      ? 'bg-red-500/90 hover:bg-red-600/90' 
+                      : 'bg-blue-500/90 hover:bg-blue-600/90'
+                  }`}
+                >
+                  {isRecording ? "Listening..." : "Hold to Talk"}
+                </button>
+                
+                <button
+                  onClick={growPlant}
+                  className="flex-1 py-3 bg-green-500/90 text-white rounded-xl font-semibold shadow-lg hover:bg-green-600/90 transition-all active:scale-95"
+                >
+                  Plant Seed
+                </button>
+              </div>
+              
+              <div className="mt-1 h-6 flex items-center justify-center bg-white/30 rounded-lg">
+                <p className="text-xs text-gray-800 font-bold">{status}</p>
+              </div>
+            </div>
 
-        if (type === "grass") {
-          plant = `
-<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 15}" stroke="green" stroke-width="2"/>`;
-        }
+          </div>
+        </div>
+      );
+    }
 
-        garden.innerHTML += plant;
-
-        document.getElementById("entry").value = "";
-      }
-    </script>
-  </body>
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
 </html>
