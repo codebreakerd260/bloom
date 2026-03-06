@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Bloom 🌱</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+
+  <body
+    class="bg-green-50 flex flex-col items-center justify-center min-h-screen"
+  >
+    <h1 class="text-3xl font-bold mb-4">Bloom 🌱</h1>
+    <p class="text-gray-600 mb-6">Write one thing you're grateful for</p>
+
+    <textarea
+      id="entry"
+      class="border rounded p-3 w-96 h-24"
+      placeholder="Today I'm grateful for..."
+    ></textarea>
+
+    <button
+      onclick="growPlant()"
+      class="mt-4 px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+    >
+      Plant
+    </button>
+
+    <svg
+      id="garden"
+      width="700"
+      height="350"
+      class="mt-10 border bg-white rounded shadow"
+    ></svg>
+
+    <script>
+      const garden = document.getElementById("garden");
+
+      function analyzeSentiment(text) {
+        text = text.toLowerCase();
+
+        if (text.includes("friend") || text.includes("family"))
+          return "sunflower";
+
+        if (
+          text.includes("peace") ||
+          text.includes("quiet") ||
+          text.includes("calm")
+        )
+          return "fern";
+
+        if (
+          text.includes("happy") ||
+          text.includes("joy") ||
+          text.includes("love")
+        )
+          return "tulip";
+
+        if (
+          text.includes("nature") ||
+          text.includes("sun") ||
+          text.includes("walk")
+        )
+          return "tree";
+
+        return "grass";
+      }
+
+      function growPlant() {
+        const entry = document.getElementById("entry").value;
+
+        if (!entry.trim()) return;
+
+        const type = analyzeSentiment(entry);
+
+        const x = Math.random() * 650 + 20;
+        const y = 300;
+
+        let plant = "";
+
+        if (type === "sunflower") {
+          plant = `
+<g>
+<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 30}" stroke="green" stroke-width="3"/>
+<circle cx="${x}" cy="${y - 40}" r="10" fill="gold"/>
+</g>`;
+        }
+
+        if (type === "fern") {
+          plant = `
+<g>
+<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 25}" stroke="green" stroke-width="3"/>
+<ellipse cx="${x}" cy="${y - 30}" rx="8" ry="14" fill="green"/>
+</g>`;
+        }
+
+        if (type === "tulip") {
+          plant = `
+<g>
+<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 25}" stroke="green" stroke-width="3"/>
+<polygon points="${x},${y - 35} ${x - 10},${y - 20} ${x + 10},${y - 20}" fill="pink"/>
+</g>`;
+        }
+
+        if (type === "tree") {
+          plant = `
+<g>
+<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 40}" stroke="brown" stroke-width="4"/>
+<circle cx="${x}" cy="${y - 50}" r="15" fill="green"/>
+</g>`;
+        }
+
+        if (type === "grass") {
+          plant = `
+<line x1="${x}" y1="${y}" x2="${x}" y2="${y - 15}" stroke="green" stroke-width="2"/>`;
+        }
+
+        garden.innerHTML += plant;
+
+        document.getElementById("entry").value = "";
+      }
+    </script>
+  </body>
+</html>
