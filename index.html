@@ -18,7 +18,7 @@
         "@google/generative-ai": "https://esm.sh/@google/generative-ai"
       }
     }
-  </script>
+  </script> 
 
   <!-- Babel standalone for in-browser JSX compilation -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -229,17 +229,123 @@
       );
     }
 
+    function Fence() {
+      const fenceParts = React.useMemo(() => {
+        const parts = [];
+        const size = 28;
+        const spacing = 1.0;
+        const height = 1.2;
+
+        for (let i = -size / 2; i <= size / 2; i += spacing) {
+          parts.push(
+            <mesh key={`p-f-${i}`} position={[i, height / 2, size / 2]} castShadow>
+              <boxGeometry args={[0.2, height, 0.05]} />
+              <meshStandardMaterial color="#8b5a2b" roughness={0.9} />
+            </mesh>,
+            <mesh key={`p-b-${i}`} position={[i, height / 2, -size / 2]} castShadow>
+              <boxGeometry args={[0.2, height, 0.05]} />
+              <meshStandardMaterial color="#8b5a2b" roughness={0.9} />
+            </mesh>,
+            <mesh key={`p-l-${i}`} position={[-size / 2, height / 2, i]} castShadow>
+              <boxGeometry args={[0.05, height, 0.2]} />
+              <meshStandardMaterial color="#8b5a2b" roughness={0.9} />
+            </mesh>,
+            <mesh key={`p-r-${i}`} position={[size / 2, height / 2, i]} castShadow>
+              <boxGeometry args={[0.05, height, 0.2]} />
+              <meshStandardMaterial color="#8b5a2b" roughness={0.9} />
+            </mesh>
+          );
+        }
+
+        const rails = [0.3, 0.9];
+        rails.forEach((y, idx) => {
+          parts.push(
+            <group key={`rails-${idx}`}>
+              <mesh position={[0, y, size / 2 - 0.05]}>
+                <boxGeometry args={[size, 0.1, 0.05]} />
+                <meshStandardMaterial color="#ffffff" roughness={0.9} />
+              </mesh>
+              <mesh position={[0, y, -size / 2 + 0.05]}>
+                <boxGeometry args={[size, 0.1, 0.05]} />
+                <meshStandardMaterial color="#ffffff" roughness={0.9} />
+              </mesh>
+              <mesh position={[-size / 2 + 0.05, y, 0]}>
+                <boxGeometry args={[0.05, 0.1, size]} />
+                <meshStandardMaterial color="#ffffff" roughness={0.9} />
+              </mesh>
+              <mesh position={[size / 2 - 0.05, y, 0]}>
+                <boxGeometry args={[0.05, 0.1, size]} />
+                <meshStandardMaterial color="#ffffff" roughness={0.9} />
+              </mesh>
+            </group>
+          );
+        });
+
+        return parts;
+      }, []);
+
+      return <group>{fenceParts}</group>;
+    }
+
+    function BrickBase() {
+      // Create cement bricks surrounding the given 30x30 garden block from y=0 downwards
+      const brickParts = React.useMemo(() => {
+        const parts = [];
+        const size = 30; // Match the garden floor block size
+        const thickness = 1; // Width of the brick wall
+        const height = 4; // Height of the bricks to match ground depth
+        const yPos = -height / 2; // Position on Y axis so the top sits at y=0, going downwards
+
+        // Front wall
+        parts.push(
+          <mesh key="wall-front" position={[0, yPos, size / 2]} castShadow>
+            <boxGeometry args={[size + thickness * 2, height, thickness]} />
+            <meshStandardMaterial color="#EFCEAD" roughness={0.9} />
+          </mesh>
+        );
+        // Back wall
+        parts.push(
+          <mesh key="wall-back" position={[0, yPos, -size / 2]} castShadow>
+            <boxGeometry args={[size + thickness * 2, height, thickness]} />
+            <meshStandardMaterial color="#EFCEAD" roughness={0.9} />
+          </mesh>
+        );
+        // Left wall
+        parts.push(
+          <mesh key="wall-left" position={[-size / 2, yPos, 0]} castShadow>
+            <boxGeometry args={[thickness, height, size]} />
+            <meshStandardMaterial color="#EFCEAD" roughness={0.9} />
+          </mesh>
+        );
+        // Right wall
+        parts.push(
+          <mesh key="wall-right" position={[size / 2, yPos, 0]} castShadow>
+            <boxGeometry args={[thickness, height, size]} />
+            <meshStandardMaterial color="#EFCEAD" roughness={0.9} />
+          </mesh>
+        );
+
+        return parts;
+      }, []);
+
+      return <group>{brickParts}</group>;
+    }
+
     function Garden({ plants, onPlayTTS }) {
       return (
-        <Canvas camera={{ position: [0, 5, 15], fov: 50 }}>
+        <Canvas camera={{ position: [0, 10, 20], fov: 50 }}>
           <Sky sunPosition={[100, 20, 100]} />
-          <ambientLight intensity={0.5} />
-          <pointLight position={[10, 10, 10]} />
+          <ambientLight intensity={1.5} />
+          <directionalLight position={[10, 20, 10]} intensity={2} castShadow />
+          <pointLight position={[-10, 10, -10]} intensity={1.5} />
           <OrbitControls />
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-            <planeGeometry args={[30, 30]} />
-            <meshStandardMaterial color="#3d5c3a" />
+          {/* Raised Garden Bed Block */}
+          <mesh position={[0, -2, 0]}>
+            <boxGeometry args={[30, 4, 30]} />
+            <meshStandardMaterial color="#568203" />
           </mesh>
+          <BrickBase />
+          <Fence />
           {plants.map((plant, i) => {
             const PlantModel = {
               sunflower: Sunflower,
@@ -379,9 +485,16 @@
           const genAI = new GoogleGenerativeAI(geminiKey);
           const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
           const prompt = `Analyze this gratitude journal entry: "${entry}". 
+          Categorize the entry into one of the following plant types based on these STRICT thematic rules:
+          - "sunflower": family, friends, relationships, warmth, social connections, community.
+          - "fern": peace, quiet, calm, solitude, rest, relaxation, meditation.
+          - "tulip": joy, love, beauty, excitement, passion, bright moments, celebration.
+          - "tree": nature, walks, grounding, strength, weather, the outdoors, resilience.
+          - "grass": simple things, everyday moments, little joys, staying grounded, presence.
+          
           Return ONLY a JSON object with two fields (do not wrap in markdown tags like \`\`\`json): 
           {
-            "type": one of ["sunflower", "fern", "tulip", "tree", "grass"] based on sentiment/meaning,
+            "type": one of ["sunflower", "fern", "tulip", "tree", "grass"] strictly following the thematic rules above,
             "message": "A beautiful, poetic, and highly personalized 2-3 sentence response that deeply reflects on the user's gratitude and offers profound encouragement."
           }`;
 
